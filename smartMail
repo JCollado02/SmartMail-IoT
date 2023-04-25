@@ -1,0 +1,87 @@
+#include <Arduino.h>
+#include <ArduinoJson.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266WiFiMulti.h>
+#include <ESP8266HTTPClient.h>
+#include <WiFiClientSecureBearSSL.h>
+#include <Servo.h>
+
+Servo lockServo, flagServo;
+const int motionSensorPin = 2;
+bool isActive = true;
+bool lockStatus = false;
+
+ESP8266WiFiMulti WiFiMulti;
+
+void setup() {
+  Serial.begin(115200);
+  WiFi.mode(WIFI_STA);
+  WiFiMulti.addAP("BW_Jacket");  // when on BW network change to ("BW_Jacket")
+  
+  pinMode(motionSensorPin, INPUT);
+  lockServo.attach(0);
+  flagServo.attach(13);
+  lockServo.write(180);
+  flagServo.write(0);
+  Serial.println("Initializing Smart Mail...");
+  delay(5000);
+  Serial.println("Smart Mail Online");
+}
+
+void loop() {
+
+  if (isActive && digitalRead(motionSensorPin) == HIGH) { // if motion detected
+    Serial.println("Motion detected, waiting to activate servos...");
+    while(digitalRead(motionSensorPin) == HIGH) {
+      Serial.println("Motion still detected, waiting another 10 seconds...");
+      delay(10000);
+    }
+    Serial.println("Motion no longer detected, rotating servos...");
+    lockServo.write(0);
+    flagServo.write(180);
+    isActive = false;
+    lockStatus = true;
+    
+    if ((WiFiMulti.run() == WL_CONNECTED)) {
+      WiFiClient client;
+      HTTPClient https;
+      Serial.print("[HTTPS] begin...\n");
+      if (https.begin(client, "http://192.168.1.113/smartMail.php")) {
+        DynamicJsonDocument doc(1024);
+        doc["sensorId"] = "csc263";
+        char serialized[1024];
+        serializeJson(doc, serialized);
+        Serial.printf("Here is our serialized version %s", serialized);
+        Serial.print("[HTTPS] POST...\n");
+        int httpCode = https.POST(serialized);
+        if (httpCode > 0) {
+          Serial.printf("[HTTPS] POST... code: %d\n", httpCode);
+          if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+            String payload = https.getString();
+            DynamicJsonDocument responseDoc(1024);
+            deserializeJson(responseDoc, payload);
+            const char* status = responseDoc["status"];
+            //Serial.printf("Status is %s\n", status);
+            }
+        } else {
+          Serial.printf("[HTTPS] POST... failed, error: %s\n", https.errorToString(httpCode).c_str());
+         }
+          https.end();
+        } else {
+        Serial.printf("[HTTPS] Unable to connect\n");
+      }
+    }
+    Serial.println("Timestamp Upload Complete");
+    delay(5000);
+  }
+  else {
+    if (isActive) { // if Sensor is active but no motion detected
+      Serial.println("Sensor Online. No Motion Detected. Trying Again in 5 seconds...");
+      delay(5000);
+    }
+    else {
+    Serial.println("Smart Mail Offline. Trying Again in 5 seconds...");
+    delay(5000);
+    }
+  }
+}
