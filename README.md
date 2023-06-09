@@ -5,3 +5,9 @@ and the box is closed. In total, this project uses an ESP8266 to control the ser
 my partner and had to utilize our knowledge in SQL, PHP, HTML, Python, and C to create our dashboard and setup our devices.
 
 ## Devices Used
+- Raspberry Pi 4
+- Two MG90S Servos
+- ESP8266
+- PIR Sensor
+
+
