@@ -10,4 +10,5 @@ my partner and had to utilize our knowledge in SQL, PHP, HTML, Python, and C to 
 - ESP8266
 - PIR Sensor
 
-## Creating Our SmartMail @
+## Creating Our Smart Mailbox
+For our project, our Raspberry Pi is responsible for hosting the web dashboard used to display the times that packages were delivered and for controlling the PIR sensor and servos. Each entry into the database simply contains a timestamp of when something was delivered and the name of the device. The database was created on the Pi using MariaDB and the webpage was created using HTML, a little CSS, JavaScript, and PHP.
